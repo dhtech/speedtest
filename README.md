@@ -34,18 +34,25 @@ has its full size, but no block of it is written, so it takes no disk
 space. 100G fits on a 10G disk. A read gives zeros, which is all a speed
 test needs.
 
-Make them where the web server will find them, one command a file:
+Make them with `dd`, where the web server will find them, one command a
+file:
 
 ```sh
 cd /var/lib/dh-speedtest        # or wherever the server serves them from
-truncate -s 100M 100M
-truncate -s 1G   1G
-truncate -s 10G  10G
-truncate -s 100G 100G
+dd if=/dev/zero of=100M bs=1 count=0 seek=100M
+dd if=/dev/zero of=1G   bs=1 count=0 seek=1G
+dd if=/dev/zero of=10G  bs=1 count=0 seek=10G
+dd if=/dev/zero of=100G bs=1 count=0 seek=100G
 chmod 644 100M 1G 10G 100G
 ```
 
-The sizes are binary: `100M` is 100 x 1024 x 1024 bytes, `1G` is 1024 MB.
+What the options do: `count=0` copies nothing at all, and `seek=10G`
+first moves 10G into the output file - so `dd` only sets the file's
+size and writes no data. Each command is done at once and says
+`0+0 records in, 0+0 records out`.
+
+The sizes are binary: to `dd`, `100M` is 100 x 1024 x 1024 bytes and
+`1G` is 1024 MB (it is `MB` and `GB` that would be the decimal ones).
 The page counts with the same numbers.
 
 Check that they are the right size and really take no space:
@@ -57,16 +64,14 @@ du -h  100M 1G 10G 100G      # the space used: 0 for each
 
 Things to know:
 
-- Do not make them with `fallocate` or by writing zeros
-  (`dd if=/dev/zero of=10G bs=1M count=10240`): both really fill the
-  disk. If `truncate` is missing, this is the same thing with `dd`:
-  `dd if=/dev/zero of=10G bs=1 count=0 seek=10G`.
-- A plain copy can turn a sparse file into a full one. Copy with
-  `cp --sparse=always` or `rsync -S`, or simply make the files again on
-  the new machine - that is quicker than copying them.
-- Another size is one more `truncate` and one more tile in
-  `index.html`: the link (`href="/50G"`) and its size in bytes
-  (`data-bytes`).
+- Mind the options. `dd if=/dev/zero of=10G bs=1M count=10240` makes a
+  file of the same size by really writing ten gigabytes of zeros: it
+  takes minutes and fills the disk. It is `count=0` with `seek=` that
+  makes the file sparse.
+- A plain copy can turn a sparse file into a full one. Do not copy the
+  files to another machine: run the `dd` lines there, that is quicker.
+- Another size is one more `dd` line and one more tile in `index.html`:
+  the link (`href="/50G"`) and its size in bytes (`data-bytes`).
 
 How the web server should hand them out, as nginx has it on our server:
 
