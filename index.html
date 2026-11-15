@@ -1,27 +1,230 @@
-<!DOCTYPE html >
-<html>
-    <head>
-        <title>Dreamhack Speedtest</title>
-        <meta charset="UTF-8"/>     
-        <link rel="stylesheet" href="css/base.css" />
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>DreamHack Speedtest</title>
+<style>
+  :root {
+    --bg: #111214; --panel: #1b1d21; --line: #2e3138;
+    --ink: #eef0f3; --dim: #9aa0a8; --accent: #ff6600; --bad: #ff5d5d;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #f6f6f4; --panel: #ffffff; --line: #d9d9d4;
+            --ink: #1d1f23; --dim: #63676e; --accent: #d95400; --bad: #c62828; }
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; color: var(--ink);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 60rem; margin: 0 auto; padding: 2.5rem 1rem 3rem; }
+  h1 { margin: 0; font-size: clamp(2rem, 6vw, 3.4rem); line-height: 1.1;
+       letter-spacing: -0.02em; text-align: center; }
+  h1 span { color: var(--accent); }
+  h2 { margin: 2.5rem 0 .5rem; font-size: 1rem; color: var(--dim);
+       font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+  p { margin: .5rem 0; }
+  .lead { text-align: center; color: var(--dim); margin: .75rem auto 2rem;
+          max-width: 34rem; }
+  a { color: var(--accent); }
 
-        <script src="js/jquery-1.7.2.min.js"></script>
-        <script src="js/script.js"></script>
+  .tiles { display: grid; gap: 1rem;
+           grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
+  .tile { display: flex; align-items: center; justify-content: center;
+          min-height: 8rem; padding: 0 .5rem; border-radius: 6px;
+          text-decoration: none;
+          background: var(--panel); border: 1px solid var(--line);
+          color: var(--accent); font-size: clamp(2.5rem, 7vw, 4rem);
+          font-weight: 700; letter-spacing: -0.03em;
+          font-variant-numeric: tabular-nums; }
+  .tile:hover, .tile:focus-visible { border-color: var(--accent);
+          outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tile[aria-current="true"] { background: var(--accent); color: var(--bg);
+          border-color: var(--accent); }
 
-        <script src="js/cufon-yui.js" type="text/javascript"></script>
-        <script src="js/microgramma.font.js" type="text/javascript"></script>
-        <script type="text/javascript">
-            Cufon.replace('h1');
-            Cufon.replace('a'); 
-        </script>
-    </head>
-    <body>
-        <div id="container">
-            <div class="head"><h1>Dreamhack Speedtest</h1></div>
-            <a href="/100M">100M</a>
-            <a href="/1G">1G</a>
-            <a href="/10G">10G</a>
-            <a href="/100G">100G</a>
-        </div>
-    </body>
+  #run { margin-top: 1.5rem; padding: 1.5rem; border-radius: 6px;
+         background: var(--panel); border: 1px solid var(--line); }
+  #run[hidden] { display: none; }
+  .now { display: flex; align-items: baseline; justify-content: center;
+         gap: .6rem; flex-wrap: wrap; }
+  #speed { font-size: clamp(3.5rem, 14vw, 7rem); font-weight: 700;
+           line-height: 1; letter-spacing: -0.04em;
+           font-variant-numeric: tabular-nums; }
+  #unit { font-size: 1.5rem; color: var(--dim); }
+  progress { display: block; width: 100%; height: .6rem; margin: 1.25rem 0 1rem;
+             accent-color: var(--accent); }
+  dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+       gap: .75rem 1.5rem; margin: 0; }
+  dt { color: var(--dim); font-size: .85rem; }
+  dd { margin: 0; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+  #note { color: var(--dim); margin-top: 1rem; min-height: 1.5em; }
+  #note.bad { color: var(--bad); }
+  button { margin-top: .75rem; padding: .55rem 1.4rem; border-radius: 4px;
+           font: inherit; font-weight: 600; cursor: pointer;
+           color: var(--ink); background: transparent;
+           border: 1px solid var(--line); }
+  button:hover, button:focus-visible { border-color: var(--accent); }
+
+  pre { margin: .5rem 0; padding: .7rem .9rem; border-radius: 4px;
+        background: var(--panel); border: 1px solid var(--line);
+        overflow-x: auto; font: .9rem ui-monospace, monospace; }
+  .plain a { margin-right: 1.25rem; white-space: nowrap; }
+  footer { margin-top: 2.5rem; color: var(--dim); font-size: .9rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>DreamHack <span>Speedtest</span></h1>
+  <p class="lead">Pick a size. Your browser fetches that much from this
+  server and shows how fast it came.</p>
+
+  <nav class="tiles" aria-label="Test size">
+    <a class="tile" href="/100M" data-bytes="104857600">100M</a>
+    <a class="tile" href="/1G" data-bytes="1073741824">1G</a>
+    <a class="tile" href="/10G" data-bytes="10737418240">10G</a>
+    <a class="tile" href="/100G" data-bytes="107374182400">100G</a>
+  </nav>
+
+  <section id="run" hidden>
+    <div class="now" aria-live="off">
+      <span id="speed">0</span><span id="unit">Mbit/s</span>
+    </div>
+    <progress id="bar" max="1" value="0"></progress>
+    <dl>
+      <div><dt>Fetched</dt><dd id="got">0 MB</dd></div>
+      <div><dt>Time</dt><dd id="time">0.0 s</dd></div>
+      <div><dt>Average</dt><dd id="avg">-</dd></div>
+      <div><dt>Fastest second</dt><dd id="peak">-</dd></div>
+    </dl>
+    <p id="note" role="status"></p>
+    <button id="stop" type="button">Stop</button>
+  </section>
+
+  <h2>From a terminal</h2>
+  <p>A browser cannot count as fast as a fast link delivers. For anything
+  above a few gigabits, or on a machine without a browser:</p>
+  <pre id="curl">curl -o /dev/null http://THIS-SERVER/10G</pre>
+  <pre id="wget">wget -O /dev/null http://THIS-SERVER/10G</pre>
+  <p class="plain">The files themselves, nothing but zeros:
+    <a href="/100M" download>100M</a><a href="/1G" download>1G</a><a
+       href="/10G" download>10G</a><a href="/100G" download>100G</a></p>
+
+  <footer>
+    <p>This measures the way between you and this server, not your
+    internet connection. Sizes are binary: 1G is 1024 MB.</p>
+  </footer>
+</main>
+
+<script>
+"use strict";
+
+// One download, counted as it arrives. Nothing is kept: every piece is
+// dropped as soon as its length is known, so 100G costs no memory.
+//   report({bytes, seconds, bps, peak, done}) is called about four
+//   times a second and once at the end (bps: over the last second).
+async function measure(url, signal, report) {
+  const response = await fetch(url, { cache: "no-store", signal });
+  if (!response.ok) throw new Error("the server answered " + response.status);
+  const reader = response.body.getReader();
+  const start = performance.now();
+  let bytes = 0, peak = 0, lastReport = start;
+  const marks = [[start, 0]];          // [time, bytes so far], last ~1 s
+  for (;;) {
+    const { done, value } = await reader.read();
+    const now = performance.now();
+    if (value) bytes += value.byteLength;
+    if (done || now - lastReport >= 250) {
+      marks.push([now, bytes]);
+      while (marks.length > 2 && now - marks[1][0] >= 1000) marks.shift();
+      const [t0, b0] = marks[0];
+      const bps = now > t0 ? (bytes - b0) * 8000 / (now - t0) : 0;
+      if (now - start >= 1000 && bps > peak) peak = bps;
+      lastReport = now;
+      report({ bytes, seconds: (now - start) / 1000, bps, peak, done });
+    }
+    if (done) return { bytes, seconds: (now - start) / 1000, peak };
+  }
+}
+
+// 943 Mbit/s, 9.43 Gbit/s - never more than three figures
+function rate(bps) {
+  const m = bps / 1e6;
+  if (m >= 1000) return [(m / 1000).toFixed(m >= 10000 ? 1 : 2), "Gbit/s"];
+  return [m >= 100 ? m.toFixed(0) : m.toFixed(1), "Mbit/s"];
+}
+function amount(bytes) {
+  const mb = bytes / 1048576, gb = mb / 1024;
+  if (mb < 1024) return mb.toFixed(0) + " MB";
+  return gb.toFixed(gb >= 100 ? 0 : gb >= 10 ? 1 : 2) + " GB";
+}
+
+if (typeof document !== "undefined") (function () {
+  const $ = (id) => document.getElementById(id);
+  const tiles = Array.from(document.querySelectorAll(".tile"));
+  let running = null;                  // the AbortController of the run
+
+  // the command lines name this server as the visitor reached it
+  for (const id of ["curl", "wget"])
+    $(id).textContent = $(id).textContent.replace("http://THIS-SERVER", location.origin);
+
+  function show(state, total) {
+    const [n, unit] = rate(state.done && state.seconds > 0
+      ? state.bytes * 8 / state.seconds : state.bps);
+    $("speed").textContent = n;
+    $("unit").textContent = unit;
+    $("bar").value = total ? Math.min(1, state.bytes / total) : 0;
+    $("got").textContent = amount(state.bytes) + (total ? " of " + amount(total) : "");
+    $("time").textContent = state.seconds.toFixed(1) + " s";
+    $("avg").textContent = state.seconds > 0
+      ? rate(state.bytes * 8 / state.seconds).join(" ") : "-";
+    $("peak").textContent = state.peak > 0 ? rate(state.peak).join(" ") : "-";
+  }
+
+  function finish(text, bad) {
+    running = null;
+    tiles.forEach((t) => t.removeAttribute("aria-current"));
+    $("note").textContent = text;
+    $("note").className = bad ? "bad" : "";
+    $("stop").textContent = "Close";
+  }
+
+  async function start(tile) {
+    if (running) running.abort();
+    const control = running = new AbortController();
+    const total = Number(tile.dataset.bytes) || 0;
+    tiles.forEach((t) => t.removeAttribute("aria-current"));
+    tile.setAttribute("aria-current", "true");
+    $("run").hidden = false;
+    // on a narrow screen the numbers are below the tiles: bring them in
+    $("run").scrollIntoView({ block: "nearest" });
+    $("note").textContent = "Fetching " + tile.textContent + " ...";
+    $("note").className = "";
+    $("stop").textContent = "Stop";
+    show({ bytes: 0, seconds: 0, bps: 0, peak: 0, done: false }, total);
+    try {
+      const url = tile.getAttribute("href") + "?" + Date.now();
+      const end = await measure(url, control.signal, (s) => {
+        if (running === control) show(s, total);
+      });
+      if (running !== control) return;
+      finish(amount(end.bytes) + " in " + end.seconds.toFixed(1) + " s: "
+        + rate(end.bytes * 8 / end.seconds).join(" ") + " on average.");
+    } catch (error) {
+      if (running !== control) return;   // a newer run took over
+      finish(error.name === "AbortError" ? "Stopped."
+        : "The download broke off: " + error.message, error.name !== "AbortError");
+    }
+  }
+
+  // without scripts a tile is a plain link to the file; with them it
+  // measures here instead
+  for (const tile of tiles)
+    tile.addEventListener("click", (event) => { event.preventDefault(); start(tile); });
+  $("stop").addEventListener("click", () => {
+    if (running) running.abort(); else $("run").hidden = true;
+  });
+})();
+</script>
+</body>
 </html>
