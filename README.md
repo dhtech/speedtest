@@ -62,17 +62,6 @@ ls -l  100M 1G 10G 100G      # the sizes: 104857600, 1073741824, ...
 du -h  100M 1G 10G 100G      # the space used: 0 for each
 ```
 
-Things to know:
-
-- Mind the options. `dd if=/dev/zero of=10G bs=1M count=10240` makes a
-  file of the same size by really writing ten gigabytes of zeros: it
-  takes minutes and fills the disk. It is `count=0` with `seek=` that
-  makes the file sparse.
-- A plain copy can turn a sparse file into a full one. Do not copy the
-  files to another machine: run the `dd` lines there, that is quicker.
-- Another size is one more `dd` line and one more tile in `index.html`:
-  the link (`href="/50G"`) and its size in bytes (`data-bytes`).
-
 How the web server should hand them out, as nginx has it on our server:
 
 ```nginx
